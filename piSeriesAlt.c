@@ -1,48 +1,38 @@
+'''
+Codigo para realizar el calculo de pi 
+realizado por:
+juan angel carrera
+juan carlos bajan
+jose mariano reyes
+'''
+
 #include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
+#include <omp.h>
 
-#define NUM_THREADS 4
-#define N 100000000 // Ajusta el valor según tu necesidad
-
-double pi = 0.0;
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-
-void *calculate_pi(void *thread_id) {
-    long id = (long)thread_id;
-    double sum = 0.0;
-
-    for (long i = id; i < N; i += NUM_THREADS) {
-        double numerator = (i % 2 == 0) ? 1.0 : -1.0;
-        double term = numerator / (2 * i + 1);
-        sum += term;
-    }
-
-    pthread_mutex_lock(&mutex);
-    pi += sum;
-    pthread_mutex_unlock(&mutex);
-
-    pthread_exit(NULL);
-}
+#define NUM_THREADS 2
+#define N 10000000 // valor de n
 
 int main() {
-    pthread_t threads[NUM_THREADS];
-    int rc;
-    long t;
+    double pi = 0.0;
 
-    for (t = 0; t < NUM_THREADS; t++) {
-        rc = pthread_create(&threads[t], NULL, calculate_pi, (void *)t);
-        if (rc) {
-            printf("Error creating thread: %d\n", rc);
-            return -1;
+    #pragma omp parallel num_threads(NUM_THREADS)
+    {
+        // calculo paralelo de pi
+        double sum = 0.0;
+        int num_threads = omp_get_num_threads();
+        int thread_id = omp_get_thread_num();
+
+        for (long i = thread_id; i < N; i += num_threads) {
+            double numerator = (i % 2 == 0) ? 1.0 : -1.0;
+            double term = numerator / (2 * i + 1);
+            sum += term;
         }
+
+        #pragma omp critical
+        pi += sum;
     }
 
-    for (t = 0; t < NUM_THREADS; t++) {
-        pthread_join(threads[t], NULL);
-    }
-
-    pi *= 4.0; // multiplicamos por 4 para la aproximacion final
+    pi *= 4.0; // x 4 para el resultado final
 
     printf("Approximation of pi: %.10f\n", pi);
     return 0;
